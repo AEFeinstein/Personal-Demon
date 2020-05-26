@@ -47,17 +47,19 @@
 #define HAPPINESS_GAINED_PER_GAME 1 // Gained per game played
 
 // Scolding decreases happiness, increases discipline
-#define HAPPINESS_LOST_PER_SCOLDING    5
-#define DISCIPLINE_GAINED_PER_SCOLDING 1
+#define HAPPINESS_LOST_PER_SCOLDING    16
+#define DISCIPLINE_GAINED_PER_SCOLDING 4
 
 // Taking medicine makes decreases happiness
-#define HAPPINESS_LOST_PER_MEDICINE      5
+#define HAPPINESS_LOST_PER_MEDICINE      10
 
 // Being around poop decreases happiness
-#define HAPPINESS_LOST_PER_STANDING_POOP 5
+#define HAPPINESS_LOST_PER_STANDING_POOP 10
 
 // Health lost for every turn while sick
 #define HEALTH_LOST_PER_SICKNESS         5
+
+#define STARTING_HEALTH 25
 
 /*******************************************************************************
  * Structs
@@ -464,11 +466,17 @@ void updateStatus(demon_t * pd)
      **************************************************************************/
 
     // If unhappy, the demon might get a little less disciplined
-    //  0 -> 25%
-    // -1 -> 50%
-    // -2 -> 75%
-    // -3 -> 100%
-    if(rand() % 4 < (1 - pd->happy))
+    // pos -> 12.5%
+    //  0  -> 25%
+    // -1  -> 50%
+    // -2  -> 75%
+    // -3  -> 100%
+    if(pd->happy > 0 && rand() % 16 < 1)
+    {
+        INC_BOUND(pd->discipline, -1,  INT32_MIN, INT32_MAX);
+        PRINT_F("%s became less disciplined\n", pd->name);
+    }
+    else if(pd->happy <= 0 && rand() % 4 < (1 - pd->happy))
     {
         INC_BOUND(pd->discipline, -1,  INT32_MIN, INT32_MAX);
         PRINT_F("%s became less disciplined\n", pd->name);
@@ -631,7 +639,7 @@ bool takeAction(demon_t * pd)
 void resetDemon(demon_t * pd)
 {
     memset(pd, 0, sizeof(demon_t));
-    pd->health = 50;
+    pd->health = STARTING_HEALTH;
     namegen(pd->name, sizeof(pd->name)-1);
     pd->name[0] -= ('a' - 'A');
 
