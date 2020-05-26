@@ -1,9 +1,19 @@
+/*******************************************************************************
+ * Includes
+ ******************************************************************************/
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
+
+/*******************************************************************************
+ * Defines
+ ******************************************************************************/
+
+#define lengthof(x) (sizeof(x) / sizeof(x[0]))
 
 #define PRINT_F(...) printf(__VA_ARGS__)
 #define TALLY_ACTION() do{static int t=0; t++; PRINT_F("\n    %s() %d times\n", __func__, t);}while(false)
@@ -46,6 +56,10 @@
 // Health lost for every turn while sick
 #define HEALTH_LOST_PER_SICKNESS         5
 
+/*******************************************************************************
+ * Structs
+ ******************************************************************************/
+
 typedef struct
 {
     int32_t hunger; ///< 0 hunger is perfect, positive means too hungry, negative means too full
@@ -59,20 +73,35 @@ typedef struct
     char name[16];
 } demon_t;
 
+/*******************************************************************************
+ * Prototypes
+ ******************************************************************************/
+
+void namegen(char * name, int namelen);
+void feedDemon(demon_t * pd);
+void playWithDemon(demon_t * pd);
+void disciplineDemon(demon_t * pd);
 bool disciplineCheck(demon_t * pd);
+void medicineDemon(demon_t * pd);
+void clearPoop(demon_t * pd);
+void updateStatus(demon_t * pd);
+void printStats(demon_t * pd);
+char getInput(demon_t * pd);
+bool takeAction(demon_t * pd);
+void resetDemon(demon_t * pd);
+
+/*******************************************************************************
+ * Variables
+ ******************************************************************************/
 
 bool autoMode = true;
 
-#include <string.h>
-
-#define lengthof(x) (sizeof(x) / sizeof(x[0]))
-
-//		char *nm1[] = {"", "b", "br", "d", "dr", "g", "j", "k", "m", "r", "s", "t", "th", "tr", "v", "x", "z"};
-//		char *nm2[] = {"a", "e", "i", "o", "u"};
-//		char *nm3[] = {"g", "g'dr", "g'th", "gdr", "gg", "gl", "gm", "gr", "gth", "k", "l'g", "lg", "lgr", "llm", "lm", "lr", "lv", "n", "ngr", "nn", "r", "r'", "r'g", "rg", "rgr", "rk", "rn", "rr", "rthr", "rz", "str", "th't", "z", "z'g", "zg", "zr", "zz"};
-//		char *nm4[] = {"a", "e", "i", "o", "u", "iu", "uu", "au", "aa"};
-//		char *nm5[] = {"d", "k", "l", "ll", "m", "n", "nn", "r", "th", "x", "z"};
-//		char *nm6[] = {"ch", "d", "g", "k", "l", "n", "r", "s", "th", "z"};
+// const char *nm1[] = {"", "b", "br", "d", "dr", "g", "j", "k", "m", "r", "s", "t", "th", "tr", "v", "x", "z"};
+// const char *nm2[] = {"a", "e", "i", "o", "u"};
+// const char *nm3[] = {"g", "g'dr", "g'th", "gdr", "gg", "gl", "gm", "gr", "gth", "k", "l'g", "lg", "lgr", "llm", "lm", "lr", "lv", "n", "ngr", "nn", "r", "r'", "r'g", "rg", "rgr", "rk", "rn", "rr", "rthr", "rz", "str", "th't", "z", "z'g", "zg", "zr", "zz"};
+// const char *nm4[] = {"a", "e", "i", "o", "u", "iu", "uu", "au", "aa"};
+// const char *nm5[] = {"d", "k", "l", "ll", "m", "n", "nn", "r", "th", "x", "z"};
+// const char *nm6[] = {"ch", "d", "g", "k", "l", "n", "r", "s", "th", "z"};
 const char *nm1[] = {"", "", "", "", "b", "br", "d", "dr", "g", "j", "k", "m", "r", "s", "t", "th", "tr", "v", "x", "z"};
 const char *nm2[] = {"a", "e", "i", "o", "u", "a", "a", "o", "o"};
 const char *nm3[] = {"g", "g'dr", "g'th", "gdr", "gg", "gl", "gm", "gr", "gth", "k", "l'g", "lg", "lgr", "llm", "lm", "lr", "lv", "n", "ngr", "nn", "r", "r'", "r'g", "rg", "rgr", "rk", "rn", "rr", "rthr", "rz", "str", "th't", "z", "z'g", "zg", "zr", "zz"};
@@ -80,26 +109,42 @@ const char *nm4[] = {"a", "e", "i", "o", "u", "a", "a", "o", "o", "a", "e", "i",
 const char *nm5[] = {"d", "k", "l", "ll", "m", "m", "m", "n", "n", "n", "nn", "r", "r", "r", "th", "x", "z"};
 const char *nm6[] = {"ch", "d", "g", "k", "l", "n", "n", "n", "n", "n", "r", "s", "th", "th", "th", "th", "th", "z"};
 
-void namegen(char * name, int namelen) {
+/*******************************************************************************
+ * Functions
+ ******************************************************************************/
+
+/**
+ * @brief Randomly generate a demon name
+ *
+ * @param name    A pointer to store the name in
+ * @param namelen The length of the name
+ */
+void namegen(char * name, int namelen)
+{
     int nTp = rand() % 3;
     int rnd = rand() % lengthof(nm1);
     int rnd2 = rand() % lengthof(nm2);
     int rnd3 = rand() % lengthof(nm6);
     int rnd4 = rand() % lengthof(nm3);
     int rnd5 = rand() % lengthof(nm4);
-    while (nm3[rnd4] == nm1[rnd] || nm3[rnd4] == nm6[rnd3]) {
+    while (nm3[rnd4] == nm1[rnd] || nm3[rnd4] == nm6[rnd3])
+    {
         rnd4 = rand() % lengthof(nm3);
     }
-    if (nTp == 0) {
+    if (nTp == 0)
+    {
         strlcat(name, nm1[rnd], namelen);
         strlcat(name, nm2[rnd2], namelen);
         strlcat(name, nm3[rnd4], namelen);
         strlcat(name, nm4[rnd5], namelen);
         strlcat(name, nm6[rnd3], namelen);
-    } else {
+    }
+    else
+    {
         int rnd6 = rand() % lengthof(nm2);
         int rnd7 = rand() % lengthof(nm5);
-        while (nm5[rnd7] == nm3[rnd4] || nm5[rnd7] == nm6[rnd3]) {
+        while (nm5[rnd7] == nm3[rnd4] || nm5[rnd7] == nm6[rnd3])
+        {
             rnd7 = rand() % lengthof(nm5);
         }
         strlcat(name, nm1[rnd], namelen);
@@ -575,6 +620,11 @@ bool takeAction(demon_t * pd)
     return false;
 }
 
+/**
+ * @brief Initialize the demon
+ *
+ * @param pd The demon to initialize
+ */
 void resetDemon(demon_t * pd)
 {
     memset(pd, 0, sizeof(demon_t));
