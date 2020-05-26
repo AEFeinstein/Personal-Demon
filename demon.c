@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
+#include <math.h>
 
 /*******************************************************************************
  * Defines
@@ -15,7 +16,9 @@
 
 #define lengthof(x) (sizeof(x) / sizeof(x[0]))
 
-#define PRINT_F(...) printf(__VA_ARGS__)
+#define SQUARE(x) ((x)*(x))
+
+#define PRINT_F(...) do{if(!autoMode){printf(__VA_ARGS__);}}while(false)
 #define TALLY_ACTION() do{static int t=0; t++; PRINT_F("\n    %s() %d times\n", __func__, t);}while(false)
 
 #define INC_BOUND(base, inc, lbound, ubound) \
@@ -642,12 +645,18 @@ void resetDemon(demon_t * pd)
  */
 int main(void)
 {
-    srand (time(NULL));
+    autoMode = true;
 
+    // Seed the RNG
+    srand(time(NULL));
+
+    // Setup a demon for managing
     demon_t pd;
     resetDemon(&pd);
 
-    autoMode = false;
+    // Set up space to save all the results
+    demon_t autoModeDemons[10000] = {0};
+    uint32_t autoModeResultIdx = 0;
 
     bool shouldQuit = false;
     while(!shouldQuit)
@@ -662,8 +671,63 @@ int main(void)
         {
             if(autoMode)
             {
-                printf("%d actions taken\n", pd.actionsTaken);
+                // Save the results
+                memcpy(&autoModeDemons[autoModeResultIdx++], &pd, sizeof(pd));
                 resetDemon(&pd);
+
+                // If all results have been collected
+                if(autoModeResultIdx == lengthof(autoModeDemons))
+                {
+                    // Find the average for all stats
+                    int32_t len = lengthof(autoModeDemons);
+                    demon_t avgDemon = {0};
+                    for(uint32_t i = 0; i < lengthof(autoModeDemons); i++)
+                    {
+                        avgDemon.hunger += autoModeDemons[i].hunger;
+                        avgDemon.happy += autoModeDemons[i].happy;
+                        avgDemon.discipline += autoModeDemons[i].discipline;
+                        avgDemon.health += autoModeDemons[i].health;
+                        avgDemon.poopCount += autoModeDemons[i].poopCount;
+                        avgDemon.actionsTaken += autoModeDemons[i].actionsTaken;
+                    }
+                    avgDemon.hunger /= len;
+                    avgDemon.happy /= len;
+                    avgDemon.discipline /= len;
+                    avgDemon.health /= len;
+                    avgDemon.poopCount /= len;
+                    avgDemon.actionsTaken /= len;
+
+                    // Find the standard deviation for all stats
+                    demon_t stdevDemon = {0};
+                    for(uint32_t i = 0; i < lengthof(autoModeDemons); i++)
+                    {
+                        stdevDemon.hunger += SQUARE(autoModeDemons[i].hunger - avgDemon.hunger);
+                        stdevDemon.happy += SQUARE(autoModeDemons[i].happy - avgDemon.happy);
+                        stdevDemon.discipline += SQUARE(autoModeDemons[i].discipline - avgDemon.discipline);
+                        stdevDemon.health += SQUARE(autoModeDemons[i].health - avgDemon.health);
+                        stdevDemon.poopCount += SQUARE(autoModeDemons[i].poopCount - avgDemon.poopCount);
+                        stdevDemon.actionsTaken += SQUARE(autoModeDemons[i].actionsTaken - avgDemon.actionsTaken);
+                    }
+                    stdevDemon.hunger = sqrt(stdevDemon.hunger / len);
+                    stdevDemon.happy = sqrt(stdevDemon.happy / len);
+                    stdevDemon.discipline = sqrt(stdevDemon.discipline / len);
+                    stdevDemon.health = sqrt(stdevDemon.health / len);
+                    stdevDemon.poopCount = sqrt(stdevDemon.poopCount / len);
+                    stdevDemon.actionsTaken = sqrt(stdevDemon.actionsTaken / len);
+
+                    // Print everything
+                    printf("             %4s %4s\n", "Avg", "Std");
+                    printf("hunger       %4d %4d\n", avgDemon.hunger,       stdevDemon.hunger);
+                    printf("happy        %4d %4d\n", avgDemon.happy,        stdevDemon.happy);
+                    printf("discipline   %4d %4d\n", avgDemon.discipline,   stdevDemon.discipline);
+                    printf("health       %4d %4d\n", avgDemon.health,       stdevDemon.health);
+                    printf("poopCount    %4d %4d\n", avgDemon.poopCount,    stdevDemon.poopCount);
+                    printf("actionsTaken %4d %4d\n", avgDemon.actionsTaken, stdevDemon.actionsTaken);
+
+                    printf("\nPress enter to quit\n");
+                    getchar();
+                    return 0;
+                }
             }
             else
             {
