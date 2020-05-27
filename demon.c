@@ -22,43 +22,47 @@
 #define TALLY_ACTION() do{static int t=0; t++; PRINT_F("\n    %s() %d times\n", __func__, t);}while(false)
 
 #define INC_BOUND(base, inc, lbound, ubound) \
-    do{                                   \
-        if (base + inc > ubound) {        \
-            base = ubound;                \
-        } else if (base + inc < lbound) { \
-            base = lbound;                \
-        } else {                          \
-            base += inc;                  \
-        }                                 \
+    do{                                      \
+        if (base + inc > ubound) {           \
+            base = ubound;                   \
+        } else if (base + inc < lbound) {    \
+            base = lbound;                   \
+        } else {                             \
+            base += inc;                     \
+        }                                    \
     } while(false)
 
 // Every action modifies hunger somehow
 #define HUNGER_GAINED_PER_FEEDING 15
-#define HUNGER_LOST_PER_PLAY       8
+#define HUNGER_LOST_PER_PLAY      10
 #define HUNGER_LOST_PER_SCOLD      3
 #define HUNGER_LOST_PER_MEDICINE   3
 #define HUNGER_LOST_PER_FLUSH      3
 
-#define OBESE_THRESHOLD        -20 // too fat (i.e. not hungry)
-#define MALNOURISHED_THRESHOLD  20 // too skinny (i.e. hungry)
+#define OBESE_THRESHOLD          -20 // too fat (i.e. not hungry)
+#define MALNOURISHED_THRESHOLD    20 // too skinny (i.e. hungry)
 
 #define STOMACH_SIZE 5 // Max number of foods being digested
 
-#define HAPPINESS_GAINED_PER_GAME 1 // Gained per game played
+#define HAPPINESS_GAINED_PER_FEEDING_WHEN_HUNGRY 1
+#define HAPPINESS_LOST_PER_FEEDING_WHEN_FULL     2
+
+#define HAPPINESS_GAINED_PER_GAME 2 // Gained per game played
 
 // Scolding decreases happiness, increases discipline
-#define HAPPINESS_LOST_PER_SCOLDING    16
+#define HAPPINESS_LOST_PER_SCOLDING    8
 #define DISCIPLINE_GAINED_PER_SCOLDING 4
 
 // Taking medicine makes decreases happiness
-#define HAPPINESS_LOST_PER_MEDICINE      10
+#define HAPPINESS_LOST_PER_MEDICINE      5
 
 // Being around poop decreases happiness
-#define HAPPINESS_LOST_PER_STANDING_POOP 10
+#define HAPPINESS_LOST_PER_STANDING_POOP 5
 
 // Health lost for every turn while sick
 #define HEALTH_LOST_PER_SICKNESS         5
 
+// Amount of health to start with, can not be increased
 #define STARTING_HEALTH 25
 
 /*******************************************************************************
@@ -75,25 +79,25 @@ typedef struct
     int32_t actionsTaken;
     bool isSick;
     int32_t stomach[STOMACH_SIZE];
-    char name[16];
+    char name[32];
 } demon_t;
 
 /*******************************************************************************
  * Prototypes
  ******************************************************************************/
 
-void namegen(char * name, int namelen);
-void feedDemon(demon_t * pd);
-void playWithDemon(demon_t * pd);
-void disciplineDemon(demon_t * pd);
-bool disciplineCheck(demon_t * pd);
-void medicineDemon(demon_t * pd);
-void clearPoop(demon_t * pd);
-void updateStatus(demon_t * pd);
-void printStats(demon_t * pd);
-char getInput(demon_t * pd);
-bool takeAction(demon_t * pd);
-void resetDemon(demon_t * pd);
+void namegen(char *name, int namelen);
+void feedDemon(demon_t *pd);
+void playWithDemon(demon_t *pd);
+void disciplineDemon(demon_t *pd);
+bool disciplineCheck(demon_t *pd);
+void medicineDemon(demon_t *pd);
+void clearPoop(demon_t *pd);
+void updateStatus(demon_t *pd);
+void printStats(demon_t *pd);
+char getInput(demon_t *pd);
+bool takeAction(demon_t *pd);
+void resetDemon(demon_t *pd);
 
 /*******************************************************************************
  * Variables
@@ -124,7 +128,7 @@ const char *nm6[] = {"ch", "d", "g", "k", "l", "n", "n", "n", "n", "n", "r", "s"
  * @param name    A pointer to store the name in
  * @param namelen The length of the name
  */
-void namegen(char * name, int namelen)
+void namegen(char *name, int namelen)
 {
     int nTp = rand() % 3;
     int rnd = rand() % lengthof(nm1);
@@ -138,11 +142,11 @@ void namegen(char * name, int namelen)
     }
     if (nTp == 0)
     {
-        strlcat(name, nm1[rnd], namelen);
-        strlcat(name, nm2[rnd2], namelen);
-        strlcat(name, nm3[rnd4], namelen);
-        strlcat(name, nm4[rnd5], namelen);
-        strlcat(name, nm6[rnd3], namelen);
+        strncat(name, nm1[rnd], namelen - strlen(name) - 1);
+        strncat(name, nm2[rnd2], namelen - strlen(name) - 1);
+        strncat(name, nm3[rnd4], namelen - strlen(name) - 1);
+        strncat(name, nm4[rnd5], namelen - strlen(name) - 1);
+        strncat(name, nm6[rnd3], namelen - strlen(name) - 1);
     }
     else
     {
@@ -152,13 +156,13 @@ void namegen(char * name, int namelen)
         {
             rnd7 = rand() % lengthof(nm5);
         }
-        strlcat(name, nm1[rnd], namelen);
-        strlcat(name, nm2[rnd2], namelen);
-        strlcat(name, nm3[rnd4], namelen);
-        strlcat(name, nm2[rnd6], namelen);
-        strlcat(name, nm5[rnd7], namelen);
-        strlcat(name, nm4[rnd5], namelen);
-        strlcat(name, nm6[rnd3], namelen);
+        strncat(name, nm1[rnd], namelen - strlen(name) - 1);
+        strncat(name, nm2[rnd2], namelen - strlen(name) - 1);
+        strncat(name, nm3[rnd4], namelen - strlen(name) - 1);
+        strncat(name, nm2[rnd6], namelen - strlen(name) - 1);
+        strncat(name, nm5[rnd7], namelen - strlen(name) - 1);
+        strncat(name, nm4[rnd5], namelen - strlen(name) - 1);
+        strncat(name, nm6[rnd3], namelen - strlen(name) - 1);
     }
     // testSwear(nMs);
 }
@@ -169,31 +173,38 @@ void namegen(char * name, int namelen)
  *
  * @param pd The demon
  */
-void feedDemon(demon_t * pd)
+void feedDemon(demon_t *pd)
 {
     TALLY_ACTION();
     // Count feeding as an action
     INC_BOUND(pd->actionsTaken, 1, 0, INT16_MAX);
 
     // If the demon is sick, there's a 50% chance it refuses to eat
-    if(pd->isSick && rand() % 2)
+    if (pd->isSick && rand() % 2)
     {
         PRINT_F("%s was too sick to eat\n", pd->name);
     }
     // If the demon is unruly, it may refuse to eat
-    else if(disciplineCheck(pd))
+    else if (disciplineCheck(pd))
     {
         PRINT_F("%s was too unruly eat\n", pd->name);
     }
     else
     {
         // Make sure there's room in the stomach first
-        for(int i = 0; i < STOMACH_SIZE; i++)
+        for (int i = 0; i < STOMACH_SIZE; i++)
         {
-            if(pd->stomach[i] == 0)
+            if (pd->stomach[i] == 0)
             {
                 // If the demon eats when hungry, it gets happy, otherwise it gets sad
-                INC_BOUND(pd->happy, pd->hunger,  INT32_MIN, INT32_MAX);
+                if (pd->hunger > 0)
+                {
+                    INC_BOUND(pd->happy, HAPPINESS_GAINED_PER_FEEDING_WHEN_HUNGRY,  INT32_MIN, INT32_MAX);
+                }
+                else
+                {
+                    INC_BOUND(pd->happy, -HAPPINESS_LOST_PER_FEEDING_WHEN_FULL,  INT32_MIN, INT32_MAX);
+                }
 
                 // Give the food between 4 and 7 cycles to digest
                 pd->stomach[i] = 3 + (rand() % 4);
@@ -214,13 +225,13 @@ void feedDemon(demon_t * pd)
  *
  * @param pd The demon
  */
-void playWithDemon(demon_t * pd)
+void playWithDemon(demon_t *pd)
 {
     TALLY_ACTION();
     // Count playing as an action
     INC_BOUND(pd->actionsTaken, 1, 0, INT16_MAX);
 
-    if(disciplineCheck(pd))
+    if (disciplineCheck(pd))
     {
         PRINT_F("%s was too unruly to play\n", pd->name);
     }
@@ -240,7 +251,7 @@ void playWithDemon(demon_t * pd)
  *
  * @param pd The demon
  */
-void disciplineDemon(demon_t * pd)
+void disciplineDemon(demon_t *pd)
 {
     TALLY_ACTION();
     // Count discipline as an action
@@ -250,7 +261,7 @@ void disciplineDemon(demon_t * pd)
     INC_BOUND(pd->happy, -HAPPINESS_LOST_PER_SCOLDING,  INT32_MIN, INT32_MAX);
 
     // Discipline only increases if the demon is not sick
-    if(false == pd->isSick)
+    if (false == pd->isSick)
     {
         INC_BOUND(pd->discipline, DISCIPLINE_GAINED_PER_SCOLDING,  INT32_MIN, INT32_MAX);
         PRINT_F("You scolded %s\n", pd->name);
@@ -269,32 +280,32 @@ void disciplineDemon(demon_t * pd)
  *
  * @return true if the demon is being unruly (won't take action)
  */
-bool disciplineCheck(demon_t * pd)
+bool disciplineCheck(demon_t *pd)
 {
-    if(pd->discipline < 0)
+    if (pd->discipline < 0)
     {
-        switch(pd->discipline)
+        switch (pd->discipline)
         {
-        case -1:
-        {
-            return rand() % 8 < 4;
-        }
-        case -2:
-        {
-            return rand() % 8 < 5;
-        }
-        case -3:
-        {
-            return rand() % 8 < 6;
-        }
-        case -4:
-        {
-            return rand() % 8 < 7;
-        }
-        default:
-        {
-            return true;
-        }
+            case -1:
+                {
+                    return rand() % 8 < 4;
+                }
+            case -2:
+                {
+                    return rand() % 8 < 5;
+                }
+            case -3:
+                {
+                    return rand() % 8 < 6;
+                }
+            case -4:
+                {
+                    return rand() % 8 < 7;
+                }
+            default:
+                {
+                    return true;
+                }
         }
     }
     else
@@ -308,14 +319,14 @@ bool disciplineCheck(demon_t * pd)
  *
  * @param pd The demon
  */
-void medicineDemon(demon_t * pd)
+void medicineDemon(demon_t *pd)
 {
     TALLY_ACTION();
     // Giving medicine counts as an action
     INC_BOUND(pd->actionsTaken, 1, 0, INT16_MAX);
 
     // 7/8 chance the demon is healed
-    if(rand() % 8 < 7)
+    if (rand() % 8 < 7)
     {
         PRINT_F("You gave %s medicine, and it was cured\n", pd->name);
         pd->isSick = false;
@@ -337,14 +348,14 @@ void medicineDemon(demon_t * pd)
  *
  * @param pd The demon
  */
-void clearPoop(demon_t * pd)
+void clearPoop(demon_t *pd)
 {
     TALLY_ACTION();
     // Flushing counts as an action
     INC_BOUND(pd->actionsTaken, 1, 0, INT16_MAX);
 
     // Clear a poop
-    if(pd->poopCount > 0)
+    if (pd->poopCount > 0)
     {
         PRINT_F("You flushed a poop\n");
         INC_BOUND(pd->poopCount, -1,  INT32_MIN, INT32_MAX);
@@ -369,7 +380,7 @@ void clearPoop(demon_t * pd)
  *
  * @param pd The demon
  */
-void updateStatus(demon_t * pd)
+void updateStatus(demon_t *pd)
 {
     /***************************************************************************
      * Poop Status
@@ -382,25 +393,25 @@ void updateStatus(demon_t * pd)
     // 4+ poop -> 100% chance
     bool wasSick = pd->isSick;
     pd->isSick |= (rand() % 4 > (3 - pd->poopCount));
-    if(!wasSick && pd->isSick)
+    if (!wasSick && pd->isSick)
     {
         PRINT_F("Poop made %s sick\n", pd->name);
     }
 
     // Being around poop makes the demon sad
-    if(pd->poopCount > 0)
+    if (pd->poopCount > 0)
     {
-        INC_BOUND(pd->happy, HAPPINESS_LOST_PER_STANDING_POOP * -(pd->poopCount), INT32_MIN, INT32_MAX);
+        INC_BOUND(pd->happy, -HAPPINESS_LOST_PER_STANDING_POOP, INT32_MIN, INT32_MAX);
     }
 
     // Check if demon should poop
-    for(int i = 0; i < STOMACH_SIZE; i++)
+    for (int i = 0; i < STOMACH_SIZE; i++)
     {
-        if(pd->stomach[i] > 0)
+        if (pd->stomach[i] > 0)
         {
             pd->stomach[i]--;
             // If the food was digested
-            if(0 == pd->stomach[i])
+            if (0 == pd->stomach[i])
             {
                 // Make a poop
                 pd->poopCount++;
@@ -414,12 +425,12 @@ void updateStatus(demon_t * pd)
      **************************************************************************/
 
     // If the demon is too full (obese))
-    if(pd->hunger < OBESE_THRESHOLD)
+    if (pd->hunger < OBESE_THRESHOLD)
     {
         // 5/8 chance the demon becomes sick
         wasSick = pd->isSick;
         pd->isSick |= ((rand() % 8) >= 5);
-        if(!wasSick && pd->isSick)
+        if (!wasSick && pd->isSick)
         {
             PRINT_F("Obesity made %s sick\n", pd->name);
         }
@@ -434,7 +445,7 @@ void updateStatus(demon_t * pd)
         // 5/8 chance the demon becomes sick
         wasSick = pd->isSick;
         pd->isSick |= ((rand() % 8) >= 5);
-        if(!wasSick && pd->isSick)
+        if (!wasSick && pd->isSick)
         {
             PRINT_F("Malnourishment made %s sick\n", pd->name);
         }
@@ -448,14 +459,14 @@ void updateStatus(demon_t * pd)
      * Sick Status
      **************************************************************************/
 
-    if(rand() % 32 == 0)
+    if (rand() % 32 == 0)
     {
         pd->isSick = true;
         PRINT_F("%s randomly got sick\n", pd->name);
     }
 
     // If the demon is sick, decrease health
-    if(pd->isSick)
+    if (pd->isSick)
     {
         INC_BOUND(pd->health, -HEALTH_LOST_PER_SICKNESS,  INT32_MIN, INT32_MAX);
         PRINT_F("%s lost health to sickness\n", pd->name);
@@ -471,12 +482,12 @@ void updateStatus(demon_t * pd)
     // -1  -> 50%
     // -2  -> 75%
     // -3  -> 100%
-    if(pd->happy > 0 && rand() % 16 < 1)
+    if (pd->happy > 0 && rand() % 16 < 1)
     {
         INC_BOUND(pd->discipline, -1,  INT32_MIN, INT32_MAX);
         PRINT_F("%s became less disciplined\n", pd->name);
     }
-    else if(pd->happy <= 0 && rand() % 4 < (1 - pd->happy))
+    else if (pd->happy <= 0 && rand() % 4 < (1 - pd->happy))
     {
         INC_BOUND(pd->discipline, -1,  INT32_MIN, INT32_MAX);
         PRINT_F("%s became less disciplined\n", pd->name);
@@ -487,7 +498,7 @@ void updateStatus(demon_t * pd)
      **************************************************************************/
 
     // Zero health means the demon died
-    if(pd->health <= 0)
+    if (pd->health <= 0)
     {
         PRINT_F("%s died\n", pd->name);
     }
@@ -498,7 +509,7 @@ void updateStatus(demon_t * pd)
  *
  * @param pd The demon
  */
-void printStats(demon_t * pd)
+void printStats(demon_t *pd)
 {
     PRINT_F("\n");
     PRINT_F("---------------\n");
@@ -517,35 +528,35 @@ void printStats(demon_t * pd)
  *
  * @return char
  */
-char getInput(demon_t * pd)
+char getInput(demon_t *pd)
 {
-    if(autoMode)
+    if (autoMode)
     {
         if (pd->health <= 0)
         {
             return 'q';
         }
-        else if(pd->isSick)
+        else if (pd->isSick)
         {
             return '4';
         }
-        else if(pd->hunger > MALNOURISHED_THRESHOLD)
+        else if (pd->hunger > MALNOURISHED_THRESHOLD)
         {
             return '1';
         }
-        else if(pd->poopCount > 0)
+        else if (pd->poopCount > 0)
         {
             return '5';
         }
-        else if(pd->hunger > MALNOURISHED_THRESHOLD - HUNGER_GAINED_PER_FEEDING)
+        else if (pd->hunger > MALNOURISHED_THRESHOLD - HUNGER_GAINED_PER_FEEDING)
         {
             return '1';
         }
-        else if(pd->discipline < 0)
+        else if (pd->discipline < 0)
         {
             return '3';
         }
-        else if(pd->hunger > 0)
+        else if (pd->hunger > 0)
         {
             return '1';
         }
@@ -568,7 +579,7 @@ char getInput(demon_t * pd)
  * @return true
  * @return false
  */
-bool takeAction(demon_t * pd)
+bool takeAction(demon_t *pd)
 {
     PRINT_F("  1. Feed %s\n", pd->name);
     PRINT_F("  2. Play with %s\n", pd->name);
@@ -579,53 +590,53 @@ bool takeAction(demon_t * pd)
     PRINT_F("  > ");
 
     bool invalidInput = true;
-    while(invalidInput)
+    while (invalidInput)
     {
         invalidInput = false;
-        switch(getInput(pd))
+        switch (getInput(pd))
         {
-        case '1':
-        {
-            feedDemon(pd);
-            break;
-        }
-        case '2':
-        {
-            playWithDemon(pd);
-            break;
-        }
-        case '3':
-        {
-            disciplineDemon(pd);
-            break;
-        }
-        case '4':
-        {
-            medicineDemon(pd);
-            break;
-        }
-        case '5':
-        {
-            clearPoop(pd);
-            break;
-        }
-        case 'q':
-        {
-            return true;
-        }
-        default:
-        {
-            PRINT_F("Pick a valid option please.\n  > ");
-            invalidInput = true;
-            break;
-        }
-        case '\r':
-        case '\n':
-        {
-            // Ignore newlines
-            invalidInput = true;
-            break;
-        }
+            case '1':
+                {
+                    feedDemon(pd);
+                    break;
+                }
+            case '2':
+                {
+                    playWithDemon(pd);
+                    break;
+                }
+            case '3':
+                {
+                    disciplineDemon(pd);
+                    break;
+                }
+            case '4':
+                {
+                    medicineDemon(pd);
+                    break;
+                }
+            case '5':
+                {
+                    clearPoop(pd);
+                    break;
+                }
+            case 'q':
+                {
+                    return true;
+                }
+            default:
+                {
+                    PRINT_F("Pick a valid option please.\n  > ");
+                    invalidInput = true;
+                    break;
+                }
+            case '\r':
+            case '\n':
+                {
+                    // Ignore newlines
+                    invalidInput = true;
+                    break;
+                }
         }
     }
     return false;
@@ -636,7 +647,7 @@ bool takeAction(demon_t * pd)
  *
  * @param pd The demon to initialize
  */
-void resetDemon(demon_t * pd)
+void resetDemon(demon_t *pd)
 {
     memset(pd, 0, sizeof(demon_t));
     pd->health = STARTING_HEALTH;
@@ -653,7 +664,7 @@ void resetDemon(demon_t * pd)
  */
 int main(void)
 {
-    autoMode = true;
+    autoMode = false;
 
     // Seed the RNG
     srand(time(NULL));
@@ -667,9 +678,9 @@ int main(void)
     uint32_t autoModeResultIdx = 0;
 
     bool shouldQuit = false;
-    while(!shouldQuit)
+    while (!shouldQuit)
     {
-        if(pd.health > 0)
+        if (pd.health > 0)
         {
             printStats(&pd);
             shouldQuit = takeAction(&pd);
@@ -677,19 +688,19 @@ int main(void)
         }
         else
         {
-            if(autoMode)
+            if (autoMode)
             {
                 // Save the results
                 memcpy(&autoModeDemons[autoModeResultIdx++], &pd, sizeof(pd));
                 resetDemon(&pd);
 
                 // If all results have been collected
-                if(autoModeResultIdx == lengthof(autoModeDemons))
+                if (autoModeResultIdx == lengthof(autoModeDemons))
                 {
                     // Find the average for all stats
                     int32_t len = lengthof(autoModeDemons);
                     demon_t avgDemon = {0};
-                    for(uint32_t i = 0; i < lengthof(autoModeDemons); i++)
+                    for (uint32_t i = 0; i < lengthof(autoModeDemons); i++)
                     {
                         avgDemon.hunger += autoModeDemons[i].hunger;
                         avgDemon.happy += autoModeDemons[i].happy;
@@ -707,7 +718,7 @@ int main(void)
 
                     // Find the standard deviation for all stats
                     demon_t stdevDemon = {0};
-                    for(uint32_t i = 0; i < lengthof(autoModeDemons); i++)
+                    for (uint32_t i = 0; i < lengthof(autoModeDemons); i++)
                     {
                         stdevDemon.hunger += SQUARE(autoModeDemons[i].hunger - avgDemon.hunger);
                         stdevDemon.happy += SQUARE(autoModeDemons[i].happy - avgDemon.happy);
