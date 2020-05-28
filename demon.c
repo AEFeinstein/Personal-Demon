@@ -654,7 +654,7 @@ void resetDemon(demon_t *pd)
  */
 int main(void)
 {
-    autoMode = true;
+    autoMode = false;
 
     // Seed the RNG
     srand(time(NULL));
