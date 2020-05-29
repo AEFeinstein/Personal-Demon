@@ -44,7 +44,7 @@
 #define OBESE_THRESHOLD        -6 ///< too fat (i.e. not hungry)
 #define MALNOURISHED_THRESHOLD  6 ///< too skinny (i.e. hungry)
 
-#define HAPPINESS_GAINED_PER_GAME                3 ///< Playing games increases happiness
+#define HAPPINESS_GAINED_PER_GAME                4 ///< Playing games increases happiness
 #define HAPPINESS_GAINED_PER_FEEDING_WHEN_HUNGRY 1 ///< Eating when hungry increases happiness
 #define HAPPINESS_LOST_PER_FEEDING_WHEN_FULL     3 ///< Eating when full decreases happiness
 #define HAPPINESS_LOST_PER_MEDICINE              4 ///< Taking medicine makes decreases happiness
@@ -52,14 +52,15 @@
 #define HAPPINESS_LOST_PER_SCOLDING              6 ///< Scolding decreases happiness
 
 // TODO once a demon gets unruly, its hard to get it back on track, cascading effect. unruly->refuse stuff->unhappy->unruly
-// TODO don't get randomly unruly for first X turns?
-// TODO baby/child are fine, teenager/adult are unruly?
-#define DISCIPLINE_GAINED_PER_SCOLDING 6 ///< Scolding increases discipline
+#define DISCIPLINE_GAINED_PER_SCOLDING 4 ///< Scolding increases discipline
 #define DISCIPLINE_LOST_RANDOMLY       2 ///< Discipline is randomly lost
 
-#define STARTING_HEALTH           40 ///< Health is started with, cannot be increased
+#define STARTING_HEALTH          20 ///< Health is started with, cannot be increased
 #define HEALTH_LOST_PER_SICKNESS  1 ///< Health is lost every turn while sick
-#define HEALTH_LOST_PER_OBE_MAL   5 ///< Health is lost every turn while obese or malnourished
+#define HEALTH_LOST_PER_OBE_MAL   2 ///< Health is lost every turn while obese or malnourished
+
+#define ACTIONS_UNTIL_TEEN  33
+#define ACTIONS_UNTIL_ADULT 66
 
 /*******************************************************************************
  * Enums
@@ -77,7 +78,12 @@ typedef enum
     EVT_NUM_EVENTS,
 } event_t;
 
-uint32_t evtCtr[EVT_NUM_EVENTS] = {0};
+typedef enum
+{
+    AGE_CHILD,
+    AGE_TEEN,
+    AGE_ADULT
+} age_t;
 
 /*******************************************************************************
  * Structs
@@ -100,6 +106,7 @@ typedef struct
     bool isSick;
     int32_t stomach[STOMACH_SIZE];
     char name[32];
+    age_t age;
     eventQueue_t* evQueue;
 } demon_t;
 
@@ -128,7 +135,9 @@ void enqueueEvt(demon_t* pd, event_t evt);
  * Variables
  ******************************************************************************/
 
-bool autoMode = true;
+uint32_t evtCtr[EVT_NUM_EVENTS] = {0};
+
+bool autoMode = false;
 
 // const char *nm1[] = {"", "b", "br", "d", "dr", "g", "j", "k", "m", "r", "s", "t", "th", "tr", "v", "x", "z"};
 // const char *nm2[] = {"a", "e", "i", "o", "u"};
@@ -214,21 +223,20 @@ void feedDemon(demon_t* pd)
     // If the demon is unruly, it may refuse to eat
     else if (disciplineCheck(pd))
     {
-        PRINT_F("%s was too unruly eat\n", pd->name);
-        // Get a bit hungrier
-        INC_BOUND(pd->hunger, HUNGER_GAINED_PER_MEDICINE,  INT32_MIN, INT32_MAX);
-    }
-    // If the demon is unruly, it may steal extra food
-    else if (disciplineCheck(pd))
-    {
-        // triple serving
-        if(eatFood(pd) && eatFood(pd) && eatFood(pd))
+        if(rand() % 2 == 0)
         {
-            PRINT_F("%s ate the food, then stole more and overate\n", pd->name);
+            PRINT_F("%s was too unruly eat\n", pd->name);
+            // Get a bit hungrier
+            INC_BOUND(pd->hunger, HUNGER_GAINED_PER_MEDICINE,  INT32_MIN, INT32_MAX);
         }
         else
         {
-            PRINT_F("%s ate the food, then stole a second helping, but was too full\n", pd->name);
+            // Eat as much as possible
+            for(int i = 0; i < 3; i++)
+            {
+                eatFood(pd);
+            }
+            PRINT_F("%s ate the food, then stole more and overate\n", pd->name);
         }
     }
     // Normal feeding
@@ -298,7 +306,22 @@ void playWithDemon(demon_t* pd)
     else
     {
         // Playing makes the demon happy
-        INC_BOUND(pd->happy, HAPPINESS_GAINED_PER_GAME,  INT32_MIN, INT32_MAX);
+        switch(pd->age)
+        {
+            case AGE_CHILD:
+            case AGE_TEEN:
+            {
+                INC_BOUND(pd->happy, HAPPINESS_GAINED_PER_GAME,  INT32_MIN, INT32_MAX);
+                break;
+            }
+            case AGE_ADULT:
+            {
+                // Adults don't get as happy per play as kids
+                INC_BOUND(pd->happy, HAPPINESS_GAINED_PER_GAME / 2,  INT32_MIN, INT32_MAX);
+                break;
+            }
+        }
+
         PRINT_F("You played with %s\n", pd->name);
     }
 
@@ -348,25 +371,29 @@ bool disciplineCheck(demon_t* pd)
         {
             case -1:
             {
-                return rand() % 8 < 4;
+                return (rand() % 8) < 4;
             }
             case -2:
             {
-                return rand() % 8 < 5;
+                return (rand() % 8) < 5;
             }
             case -3:
             {
-                return rand() % 8 < 6;
-            }
-            case -4:
-            {
-                return rand() % 8 < 7;
+                return (rand() % 8) < 6;
             }
             default:
             {
-                return true;
+                return (rand() % 8) < 7;
             }
         }
+    }
+    else if(AGE_TEEN == pd->age)
+    {
+        return (rand() % 8) < 2;
+    }
+    else if(AGE_ADULT == pd->age)
+    {
+        return (rand() % 8) < 1;
     }
     else
     {
@@ -544,6 +571,21 @@ void updateStatus(demon_t* pd)
     }
 
     /***************************************************************************
+     * Age status
+     **************************************************************************/
+
+    if(pd->age == AGE_CHILD && pd->actionsTaken >= ACTIONS_UNTIL_TEEN)
+    {
+        PRINT_F("%s is now a teenager. Watch out.\n", pd->name);
+        pd->age = AGE_TEEN;
+    }
+    else if(pd->age == AGE_TEEN && pd->actionsTaken >= ACTIONS_UNTIL_ADULT)
+    {
+        PRINT_F("%s is now an adult. Boring.\n", pd->name);
+        pd->age = AGE_ADULT;
+    }
+
+    /***************************************************************************
      * Process one event per call
      **************************************************************************/
 
@@ -600,8 +642,28 @@ void updateStatus(demon_t* pd)
         }
         case EVT_LOST_DISCIPLINE:
         {
-            INC_BOUND(pd->discipline, -DISCIPLINE_LOST_RANDOMLY,  INT32_MIN, INT32_MAX);
-            PRINT_F("%s became less disciplined\n", pd->name);
+            switch(pd->age)
+            {
+                case AGE_CHILD:
+                {
+                    // Kids don't lose discipline, they're good kids!
+                    break;
+                }
+                case AGE_TEEN:
+                {
+                    // Rebellious teenage years lose triple discipline
+                    PRINT_F("%s became less disciplined\n", pd->name);
+                    INC_BOUND(pd->discipline, 3 * -DISCIPLINE_LOST_RANDOMLY,  INT32_MIN, INT32_MAX);
+                    break;
+                }
+                case AGE_ADULT:
+                {
+                    // Adults calm down a bit
+                    PRINT_F("%s became less disciplined\n", pd->name);
+                    INC_BOUND(pd->discipline, -DISCIPLINE_LOST_RANDOMLY,  INT32_MIN, INT32_MAX);
+                    break;
+                }
+            }
             break;
         }
     }
@@ -662,10 +724,6 @@ char getInput(demon_t* pd)
         else if (pd->poopCount > 0)
         {
             return '5';
-        }
-        else if (pd->hunger > MALNOURISHED_THRESHOLD - HUNGER_LOST_PER_FEEDING)
-        {
-            return '1';
         }
         else if (pd->discipline < 0)
         {
@@ -829,8 +887,6 @@ event_t dequeueEvt(demon_t* pd)
  */
 int main(void)
 {
-    autoMode = false;
-
     // Seed the RNG
     srand(time(NULL));
 
